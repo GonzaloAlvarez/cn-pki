@@ -44,7 +44,7 @@ cp .env.example .env
 
 Edit `.env`:
 - `CA_NAME` — display name for the CA (shown in cert issuer field)
-- `CA_DNS_NAMES` — comma-separated hostnames/IPs step-ca will be reachable at on the LAN (e.g. `step-ca,192.168.1.42`)
+- `CA_DNS_NAMES` — comma-separated hostnames/IPs step-ca will be reachable at. **Must include `step-ca`** (the Docker service name) so Traefik can connect to the ACME endpoint over TLS (e.g. `step-ca,pki.lan,192.168.1.42`)
 - `PKI_DOMAIN` — hostname Traefik will request a TLS cert for (e.g. `pki.lan`). Must resolve to this machine's LAN IP — both from browsers and from inside Docker (step-ca uses it for the ACME http-01 challenge)
 - `ADMIN_EMAIL` — email address for ACME registration with step-ca
 
@@ -64,10 +64,10 @@ curl -k https://127.0.0.1:9000/health
 
 ### 4. Configure Cert Warden
 
-Open `https://<PKI_DOMAIN>/certwarden/app`.
+Open `https://<PKI_DOMAIN>/certwarden/app`. Default credentials: `admin` / `password` (you'll be prompted to change the password on first login).
 
 1. **Add ACME server** — URL: `https://step-ca:9000/acme/acme/directory`
-   - Upload `pki/root_ca.crt` as the CA bundle (so Cert Warden trusts step-ca's HTTPS)
+   - The root CA is automatically injected into certwarden's system trust store on startup (via the custom entrypoint), so step-ca's HTTPS is trusted out of the box
 2. **Order a certificate** — e.g. `passwords.lan`
    - Challenge type: `tls-alpn-01` (step-ca connects to the service on port 443 to verify)
 3. **Create an API key** — used by `certwarden-client` in cn-vaultwarden
