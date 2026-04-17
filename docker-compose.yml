@@ -21,22 +21,12 @@ services:
     restart: unless-stopped
 
   certwarden:
-    image: gregtwallace/certwarden-backend:latest
+    image: ghcr.io/gregtwallace/certwarden:latest
     ports:
-      - "127.0.0.1:8055:8055"
+      - "127.0.0.1:4050:4050"
     volumes:
       - certwarden_data:/opt/certwarden/data
       - ./config/certwarden.yaml:/opt/certwarden/config/certwarden.yaml:ro
-    restart: unless-stopped
-
-  certwarden-ui:
-    image: gregtwallace/certwarden-frontend:latest
-    ports:
-      - "127.0.0.1:8056:3000"
-    environment:
-      - BACKEND_URL=http://certwarden:8055
-    depends_on:
-      - certwarden
     restart: unless-stopped
 
   uptime-kuma:

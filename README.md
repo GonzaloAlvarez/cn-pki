@@ -7,8 +7,7 @@ Private CA + certificate management + uptime monitoring stack for the home LAN.
 | Service | Port | Description |
 |---|---|---|
 | `step-ca` | `127.0.0.1:9000` | Private ACME CA — signs certificates with your existing root CA |
-| `certwarden` | `127.0.0.1:8055` | Certificate store and renewal engine — REST API |
-| `certwarden-ui` | `127.0.0.1:8056` | Cert Warden web UI |
+| `certwarden` | `127.0.0.1:4050` | Certificate store, renewal engine, and web UI |
 | `uptime-kuma` | `127.0.0.1:3001` | Endpoint availability + SSL expiry monitoring |
 
 All ports are bound to `127.0.0.1` only — accessible on the Pi itself or via SSH tunnel / tailnet.
@@ -23,7 +22,7 @@ Place the following in `pki/` (this directory is gitignored):
 pki/
   root_ca.crt     ← your existing root CA certificate (PEM)
   root_ca.key     ← your existing root CA private key (PEM)
-  password.txt    ← passphrase for the root CA key (plain text, one line)
+  password.txt    ← provisioner password for step-ca (plain text, one line; not the root CA key passphrase)
 ```
 
 ### 2. Configure `.env`
@@ -52,7 +51,7 @@ curl -k https://127.0.0.1:9000/health
 
 ### 4. Configure Cert Warden
 
-Open `http://127.0.0.1:8056`.
+Open `http://127.0.0.1:4050`.
 
 1. **Add ACME server** — URL: `https://127.0.0.1:9000/acme/acme/directory`
    - Upload `pki/root_ca.crt` as the CA bundle (so Cert Warden trusts step-ca's HTTPS)
