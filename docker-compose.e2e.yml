@@ -1,0 +1,32 @@
+services:
+  step-ca:
+    image: smallstep/step-ca
+    ports:
+      - "0.0.0.0:9000:9000"
+    volumes:
+      - step_ca_data:/home/step
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=${CA_NAME}
+      - DOCKER_STEPCA_INIT_DNS_NAMES=${CA_DNS_NAMES}
+      - DOCKER_STEPCA_INIT_ADDRESS=:9000
+      - DOCKER_STEPCA_INIT_ACME=true
+      - DOCKER_STEPCA_INIT_PASSWORD_FILE=/run/secrets/password
+    secrets:
+      - source: root_ca_crt
+        target: root_ca.crt
+      - source: root_ca_key
+        target: root_ca_key
+      - source: ca_password
+        target: password
+    restart: unless-stopped
+
+secrets:
+  root_ca_crt:
+    file: ./pki/root_ca.crt
+  root_ca_key:
+    file: ./pki/root_ca.key
+  ca_password:
+    file: ./pki/password.txt
+
+volumes:
+  step_ca_data:
