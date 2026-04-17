@@ -43,6 +43,7 @@ services:
       - "--certificatesresolvers.stepca.acme.httpchallenge.entrypoint=web"
     environment:
       - LEGO_CA_CERTIFICATES=/certs/root_ca.crt
+      - DOCKER_API_VERSION=1.40
     ports:
       - "80:80"
       - "443:443"
