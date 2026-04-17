@@ -2,7 +2,7 @@ services:
   step-ca:
     image: smallstep/step-ca
     ports:
-      - "127.0.0.1:9000:9000"
+      - "9000:9000"
     volumes:
       - step_ca_data:/home/step
     environment:
@@ -18,12 +18,48 @@ services:
         target: root_ca_key
       - source: ca_password
         target: password
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf --cacert /home/step/certs/root_ca.crt https://localhost:9000/health | grep ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.4
+    depends_on:
+      step-ca:
+        condition: service_healthy
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--certificatesresolvers.stepca.acme.caserver=https://step-ca:9000/acme/acme/directory"
+      - "--certificatesresolvers.stepca.acme.email=${ADMIN_EMAIL}"
+      - "--certificatesresolvers.stepca.acme.storage=/acme/acme.json"
+      - "--certificatesresolvers.stepca.acme.httpchallenge.entrypoint=web"
+    environment:
+      - LEGO_CA_CERTIFICATES=/certs/root_ca.crt
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_acme:/acme
+      - ./pki/root_ca.crt:/certs/root_ca.crt:ro
     restart: unless-stopped
 
   certwarden:
     image: ghcr.io/gregtwallace/certwarden:latest
-    ports:
-      - "127.0.0.1:4050:4050"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.certwarden.rule=Host(`${PKI_DOMAIN}`) && PathPrefix(`/certwarden`)"
+      - "traefik.http.routers.certwarden.entrypoints=websecure"
+      - "traefik.http.routers.certwarden.tls.certresolver=stepca"
+      - "traefik.http.services.certwarden.loadbalancer.server.port=4050"
     volumes:
       - certwarden_data:/opt/certwarden/data
       - ./config/certwarden.yaml:/opt/certwarden/config/certwarden.yaml:ro
@@ -31,8 +67,13 @@ services:
 
   uptime-kuma:
     image: louislam/uptime-kuma:latest
-    ports:
-      - "127.0.0.1:3001:3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime.rule=Host(`${PKI_DOMAIN}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.uptime.entrypoints=websecure"
+      - "traefik.http.routers.uptime.tls.certresolver=stepca"
+      - "traefik.http.routers.uptime.priority=1"
+      - "traefik.http.services.uptime.loadbalancer.server.port=3001"
     volumes:
       - uptime_kuma_data:/app/data
     restart: unless-stopped
@@ -47,5 +88,6 @@ secrets:
 
 volumes:
   step_ca_data:
+  traefik_acme:
   certwarden_data:
   uptime_kuma_data:
