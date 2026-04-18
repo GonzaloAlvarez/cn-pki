@@ -36,11 +36,20 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--certificatesresolvers.stepca.acme.caserver=https://step-ca:9000/acme/acme/directory"
       - "--certificatesresolvers.stepca.acme.email=${ADMIN_EMAIL}"
       - "--certificatesresolvers.stepca.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.stepca.acme.httpchallenge.entrypoint=web"
+    labels:
+      - "traefik.enable=true"
+      # Redirect middleware: HTTP → HTTPS (used by other services, not ca-cert)
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+      # Catch-all HTTP→HTTPS redirect (lowest priority, ca-cert overrides it)
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`.+`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=https-redirect"
+      - "traefik.http.routers.http-catchall.priority=1"
     environment:
       - LEGO_CA_CERTIFICATES=/certs/root_ca.crt
     ports:
