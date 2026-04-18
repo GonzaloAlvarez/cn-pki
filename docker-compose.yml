@@ -81,12 +81,18 @@ services:
     command: ["httpd", "-f", "-p", "80", "-h", "/www"]
     labels:
       - "traefik.enable=true"
+      # HTTP (plain — for bootstrapping trust on new machines)
       - "traefik.http.routers.ca-cert.rule=PathPrefix(`/cert`)"
       - "traefik.http.routers.ca-cert.entrypoints=web"
       - "traefik.http.routers.ca-cert.priority=100"
+      # HTTPS
+      - "traefik.http.routers.ca-cert-secure.rule=PathPrefix(`/cert`)"
+      - "traefik.http.routers.ca-cert-secure.entrypoints=websecure"
+      - "traefik.http.routers.ca-cert-secure.tls.certresolver=stepca"
+      - "traefik.http.routers.ca-cert-secure.priority=100"
       - "traefik.http.services.ca-cert.loadbalancer.server.port=80"
     volumes:
-      - ./pki/root_ca.crt:/www/ca.crt:ro
+      - ./pki/root_ca.crt:/www/cert/ca.crt:ro
     restart: unless-stopped
 
   uptime-kuma:
