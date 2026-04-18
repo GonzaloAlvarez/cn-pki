@@ -67,6 +67,19 @@ services:
       - ./pki/root_ca.crt:/usr/local/share/ca-certificates/root_ca.crt:ro
     restart: unless-stopped
 
+  ca-cert:
+    image: busybox:latest
+    command: ["httpd", "-f", "-p", "80", "-h", "/www"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ca-cert.rule=PathPrefix(`/cert`)"
+      - "traefik.http.routers.ca-cert.entrypoints=web"
+      - "traefik.http.routers.ca-cert.priority=100"
+      - "traefik.http.services.ca-cert.loadbalancer.server.port=80"
+    volumes:
+      - ./pki/root_ca.crt:/www/ca.crt:ro
+    restart: unless-stopped
+
   uptime-kuma:
     image: louislam/uptime-kuma:latest
     labels:

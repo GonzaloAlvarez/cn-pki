@@ -66,11 +66,17 @@ curl -k https://127.0.0.1:9000/health
 
 Open `https://<PKI_DOMAIN>/certwarden/app`. Default credentials: `admin` / `password` (you'll be prompted to change the password on first login).
 
-1. **Add ACME server** — URL: `https://step-ca:9000/acme/acme/directory`
+Cert Warden acts as a certificate inventory and API server. It does **not** order certificates on behalf of remote LAN services — each service runs its own ACME client (e.g. its own Traefik or certbot) that requests certs directly from step-ca.
+
+1. **Add ACME server** (ACME Servers → New) — URL: `https://step-ca:9000/acme/acme/directory`
    - The root CA is automatically injected into certwarden's system trust store on startup (via the custom entrypoint), so step-ca's HTTPS is trusted out of the box
-2. **Order a certificate** — e.g. `passwords.lan`
-   - Challenge type: `tls-alpn-01` (step-ca connects to the service on port 443 to verify)
-3. **Create an API key** — used by `certwarden-client` in cn-vaultwarden
+2. **Create a private key** (Private Keys → New) — e.g. `acme-account-key`
+3. **Create an ACME account** (ACME Accounts → New) — select the step-ca server and the key from step 2, provide an email address, and accept the ToS. After saving, click **Validate** to register the account with step-ca
+4. **Create an API key** (API Keys → New) — used by `certwarden-client` on service machines (e.g. cn-vaultwarden) to upload and retrieve certificates
+
+Service machines (e.g. cn-vaultwarden) obtain certs in one of two ways:
+- **Direct ACME**: the service's own Traefik requests certs from `https://<PKI_IP>:9000/acme/acme/directory` using http-01 (the service controls port 80 on its own machine, so the challenge succeeds)
+- **certwarden-client**: fetches certs from Cert Warden's API and writes them to disk for services that don't do their own ACME
 
 ### 5. Configure Uptime Kuma
 
@@ -81,15 +87,22 @@ Open `https://<PKI_DOMAIN>/`.
 
 ### 6. Device trust (one-time per device)
 
-Install `pki/root_ca.crt` as a trusted root CA on each device. After this, all `.lan`
-services signed by this CA show a green padlock automatically.
+The root CA cert is available for download over plain HTTP (no TLS trust needed):
+
+```sh
+curl -O http://<PKI_DOMAIN>/cert/ca.crt
+```
+
+Then install it as a trusted root CA on each device:
 
 | Platform | How |
 |---|---|
+| Linux | `sudo cp ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates` |
 | macOS | Keychain Access → drag in cert → set "Always Trust" |
 | iOS | Settings → General → VPN & Device Management → install profile → Certificate Trust Settings → enable |
 | Android | Settings → Security → Install from storage |
-| Linux | `sudo cp root_ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates` |
+
+After this, all `.lan` services signed by this CA show a green padlock automatically.
 
 ## Caveats
 
