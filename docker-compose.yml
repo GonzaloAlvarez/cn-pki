@@ -82,11 +82,11 @@ services:
     labels:
       - "traefik.enable=true"
       # HTTP (plain — for bootstrapping trust on new machines)
-      - "traefik.http.routers.ca-cert.rule=PathPrefix(`/cert`)"
+      - "traefik.http.routers.ca-cert.rule=Path(`/cert/ca.crt`)"
       - "traefik.http.routers.ca-cert.entrypoints=web"
       - "traefik.http.routers.ca-cert.priority=100"
       # HTTPS
-      - "traefik.http.routers.ca-cert-secure.rule=PathPrefix(`/cert`)"
+      - "traefik.http.routers.ca-cert-secure.rule=Path(`/cert/ca.crt`)"
       - "traefik.http.routers.ca-cert-secure.entrypoints=websecure"
       - "traefik.http.routers.ca-cert-secure.tls.certresolver=stepca"
       - "traefik.http.routers.ca-cert-secure.priority=100"
