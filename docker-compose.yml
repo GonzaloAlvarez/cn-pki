@@ -1,8 +1,7 @@
 services:
   step-ca:
     image: smallstep/step-ca
-    ports:
-      - "9000:9000"
+    network_mode: host
     volumes:
       - step_ca_data:/home/step
     environment:
