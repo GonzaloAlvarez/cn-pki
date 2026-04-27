@@ -61,21 +61,6 @@ services:
       - ./pki/root_ca.crt:/certs/root_ca.crt:ro
     restart: unless-stopped
 
-  certwarden:
-    image: ghcr.io/gregtwallace/certwarden:latest
-    entrypoint: ["/bin/sh", "-c", "apk add --no-cache ca-certificates >/dev/null 2>&1; update-ca-certificates >/dev/null 2>&1; exec /app/certwarden"]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.certwarden.rule=Host(`${PKI_DOMAIN}`) && PathPrefix(`/certwarden`)"
-      - "traefik.http.routers.certwarden.entrypoints=websecure"
-      - "traefik.http.routers.certwarden.tls.certresolver=stepca"
-      - "traefik.http.services.certwarden.loadbalancer.server.port=4050"
-    volumes:
-      - certwarden_data:/opt/certwarden/data
-      - ./config/certwarden.yaml:/opt/certwarden/config/certwarden.yaml:ro
-      - ./pki/root_ca.crt:/usr/local/share/ca-certificates/root_ca.crt:ro
-    restart: unless-stopped
-
   ca-cert:
     image: busybox:latest
     command: ["httpd", "-f", "-p", "80", "-h", "/www"]
@@ -119,5 +104,4 @@ secrets:
 volumes:
   step_ca_data:
   traefik_acme:
-  certwarden_data:
   uptime_kuma_data:
