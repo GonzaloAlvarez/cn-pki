@@ -3,6 +3,10 @@ services:
     image: smallstep/step-ca
     ports:
       - "9000:9000"
+      # step-ca /metrics — Prometheus endpoint. ca.json must have
+      # `"metrics": {"address": ":9110"}` for step-ca to actually serve here;
+      # setup.sh injects that block idempotently on first run.
+      - "9110:9110"
     volumes:
       - step_ca_data:/home/step
     environment:
@@ -36,6 +40,9 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.metrics.address=:8082"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entrypoint=metrics"
       - "--certificatesresolvers.stepca.acme.caserver=https://step-ca:9000/acme/acme/directory"
       - "--certificatesresolvers.stepca.acme.email=${ADMIN_EMAIL}"
       - "--certificatesresolvers.stepca.acme.storage=/acme/acme.json"
@@ -55,10 +62,48 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Traefik /metrics — exposed on a dedicated entrypoint so it's not
+      # routable via the public HTTP/HTTPS entrypoints. Scraped by kaiser
+      # Prometheus job pki-traefik.
+      - "8082:8082"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
       - ./pki/root_ca.crt:/certs/root_ca.crt:ro
+    restart: unless-stopped
+
+  # node-exporter — pki.lan host metrics (CPU/mem/disk/net), scraped by
+  # kaiser Prometheus on 10.0.0.192:9100. network_mode: host so /proc, /sys,
+  # and the LAN-routable IP are all directly visible.
+  node-exporter:
+    image: prom/node-exporter:latest
+    network_mode: host
+    pid: host
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--web.listen-address=:9100"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+
+  # promtail — ships docker container logs + systemd journal from pki.lan
+  # to kaiser Loki at http://10.1.1.140:3100. Stack="cn-pki", host="pki"
+  # labels are applied in config/promtail/promtail.yml.
+  promtail:
+    image: grafana/promtail:3.4.2
+    command: [ "-config.file=/etc/promtail/promtail.yml" ]
+    volumes:
+      - "./config/promtail/promtail.yml:/etc/promtail/promtail.yml:ro"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /run/systemd/journal:/run/systemd/journal:ro
+      - promtail_positions:/tmp
     restart: unless-stopped
 
   ca-cert:
@@ -105,3 +150,4 @@ volumes:
   step_ca_data:
   traefik_acme:
   uptime_kuma_data:
+  promtail_positions:
