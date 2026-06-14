@@ -3,10 +3,12 @@ services:
     image: smallstep/step-ca
     ports:
       - "9000:9000"
-      # step-ca /metrics — Prometheus endpoint. ca.json must have
-      # `"metrics": {"address": ":9110"}` for step-ca to actually serve here;
-      # setup.sh injects that block idempotently on first run.
-      - "9110:9110"
+      # step-ca /metrics is DEFERRED — v0.30.2's documented `metrics:{address}`
+      # config block in ca.json doesn't actually open the listener (no log
+      # line, no socket inside the container). Until upstream sorts it out,
+      # step-ca health is observed via the existing blackbox probe of
+      # https://pki.lan:9000/acme/acme/directory in cn-observability.
+      # - "9110:9110"
     volumes:
       - step_ca_data:/home/step
     environment:
