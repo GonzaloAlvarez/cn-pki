@@ -127,19 +127,6 @@ services:
       - ./pki/root_ca.crt:/www/cert/ca.crt:ro
     restart: unless-stopped
 
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.uptime.rule=Host(`${PKI_DOMAIN}`) && PathPrefix(`/`)"
-      - "traefik.http.routers.uptime.entrypoints=websecure"
-      - "traefik.http.routers.uptime.tls.certresolver=stepca"
-      - "traefik.http.routers.uptime.priority=1"
-      - "traefik.http.services.uptime.loadbalancer.server.port=3001"
-    volumes:
-      - uptime_kuma_data:/app/data
-    restart: unless-stopped
-
 secrets:
   root_ca_crt:
     file: ./pki/root_ca.crt
@@ -151,5 +138,4 @@ secrets:
 volumes:
   step_ca_data:
   traefik_acme:
-  uptime_kuma_data:
   promtail_positions:

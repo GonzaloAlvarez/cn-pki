@@ -1,24 +1,23 @@
 # cn-pki
 
-Private CA + certificate management + uptime monitoring stack for the home LAN.
+Private CA + certificate management for the home LAN.
 
 ## Services
 
 | Service | URL | Description |
 |---|---|---|
-| `traefik` | `:80` / `:443` | Reverse proxy — terminates TLS with a cert from step-ca |
+| `traefik` | `:80` / `:443` | Reverse proxy — terminates TLS with a cert from step-ca; serves the CA bootstrap cert and redirects everything else to HTTPS |
 | `step-ca` | `:9000` | Private ACME CA — signs certificates with your existing root CA |
 | `ca-cert` | `http://<PKI_DOMAIN>/cert/ca.crt` | Serves root CA cert over plain HTTP for bootstrapping trust |
-| `uptime-kuma` | `https://<PKI_DOMAIN>/` | Endpoint availability + SSL expiry monitoring |
 
-Traefik obtains a TLS certificate from step-ca via ACME (http-01 challenge) on first start, and redirects HTTP to HTTPS. Step-ca keeps its own port (ACME clients connect to it directly).
+Traefik obtains a TLS certificate from step-ca via ACME (http-01 challenge) on first start, and redirects HTTP to HTTPS. Step-ca keeps its own port (ACME clients connect to it directly). Endpoint up/down + cert-expiry monitoring lives in the cn-observability stack (Grafana `service-status` dashboard + blackbox-exporter probes; `TailnetCertExpiringSoon` alert on the VPS Alertmanager).
 
 ## Firewall / port requirements
 
 | Port | Protocol | Purpose | Who connects |
 |------|----------|---------|--------------|
 | `80` | TCP | Traefik HTTP — redirects to HTTPS; also serves ACME http-01 challenges from step-ca | Browsers (redirect), step-ca (challenge verification) |
-| `443` | TCP | Traefik HTTPS — serves uptime-kuma with TLS | You (browser) |
+| `443` | TCP | Traefik HTTPS — serves the CA bootstrap cert (`/cert/ca.crt`) with TLS | LAN devices fetching the root CA |
 | `9000` | TCP | step-ca ACME endpoint (HTTPS) | LAN services requesting certificates via ACME (e.g. cn-vaultwarden, cn-ha-sidecar, pfSense) |
 
 All three ports must be reachable from the LAN. No other inbound ports are required — uptime-kuma and the CA cert download are only reachable through Traefik.
@@ -62,14 +61,7 @@ curl -k https://127.0.0.1:9000/health
 # → {"status":"ok"}
 ```
 
-### 4. Configure Uptime Kuma
-
-Open `https://<PKI_DOMAIN>/`.
-
-- Add monitors for each LAN service (`https://passwords.lan`, etc.)
-- Configure SMTP email notifications (Settings → Notifications)
-
-### 5. Device trust (one-time per device)
+### 4. Device trust (one-time per device)
 
 The root CA cert is available for download over plain HTTP (no TLS trust needed):
 
