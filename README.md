@@ -61,6 +61,21 @@ curl -k https://127.0.0.1:9000/health
 # → {"status":"ok"}
 ```
 
+### 3a. Configure ACME provisioner for 7-day leaves (one-time)
+
+`smallstep/step-ca`'s init creates an ACME provisioner with default 24h leaf certs.
+For this homelab we want 7 days — short enough to stay "short-lived" but long enough
+that one missed renewal cycle isn't lethal. Apply the patch:
+
+```sh
+./setup-acme-claims.sh
+```
+
+Idempotent — silent no-op when claims are already set. Re-run any time `ca.json` is
+rewritten (e.g., after a reset of the `step_ca_data` volume). See script header for
+the full rationale; see `feedback_traefik_host_net_dns` in personal memory for the
+incident that prompted the change.
+
 ### 4. Device trust (one-time per device)
 
 The root CA cert is available for download over plain HTTP (no TLS trust needed):
