@@ -87,10 +87,13 @@ services:
       - "--path.rootfs=/rootfs"
       - "--web.listen-address=:9100"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      # Resilience: reconcile-stack.sh writes resilience_* metrics into this dir.
+      - "--collector.textfile.directory=/var/lib/node_exporter/textfile_collector"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      - /var/lib/node_exporter/textfile_collector:/var/lib/node_exporter/textfile_collector:ro
     restart: unless-stopped
 
   # promtail — ships docker container logs + systemd journal from pki.lan
