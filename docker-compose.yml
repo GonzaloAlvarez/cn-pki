@@ -30,6 +30,9 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    labels:
+      # The CA is upgraded by hand (a bad step-ca image breaks all cert issuance).
+      com.centurylinklabs.watchtower.enable: "false"
     restart: unless-stopped
 
   traefik:
@@ -133,6 +136,19 @@ services:
       - "traefik.http.services.ca-cert.loadbalancer.server.port=80"
     volumes:
       - ./pki/root_ca.crt:/www/cert/ca.crt:ro
+    restart: unless-stopped
+
+  # Host-wide auto-update. No --label-enable → updates every container on pki
+  # except those labeled com.centurylinklabs.watchtower.enable=false (step-ca).
+  watchtower:
+    image: containrrr/watchtower:latest
+    command:
+      - "--cleanup"
+      - "--schedule=0 0 4 * * *"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DOCKER_API_VERSION=1.45
     restart: unless-stopped
 
 secrets:
