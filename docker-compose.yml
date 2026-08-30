@@ -52,6 +52,12 @@ services:
       - "--certificatesresolvers.stepca.acme.email=${ADMIN_EMAIL}"
       - "--certificatesresolvers.stepca.acme.storage=/acme/acme.json"
       - "--certificatesresolvers.stepca.acme.httpchallenge.entrypoint=web"
+      # File provider: routes to services the docker provider can't see
+      # (host-networked containers from sibling stacks, e.g. cn-dnsdhcpd's
+      # Technitium console). Directory mount, not a single file — single-file
+      # binds keep the old inode after git pull and the watch misses edits.
+      - "--providers.file.directory=/dynamic"
+      - "--providers.file.watch=true"
     labels:
       - "traefik.enable=true"
       # Redirect middleware: HTTP → HTTPS (used by other services, not ca-cert)
@@ -75,6 +81,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_acme:/acme
       - ./pki/root_ca.crt:/certs/root_ca.crt:ro
+      - ./config/traefik:/dynamic:ro
     restart: unless-stopped
 
   # node-exporter — pki.lan host metrics (CPU/mem/disk/net), scraped by

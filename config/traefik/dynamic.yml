@@ -1,0 +1,19 @@
+# Dynamic (file-provider) routes for services traefik's docker provider
+# can't see — host-networked containers from sibling stacks on this box.
+http:
+  routers:
+    dns-ui:
+      rule: Host(`dns.pki.lan`)
+      entryPoints:
+        - websecure
+      service: dns-ui
+      tls:
+        certResolver: stepca
+  services:
+    dns-ui:
+      loadBalancer:
+        servers:
+          # Technitium web console (cn-dnsdhcpd, network_mode: host).
+          # Console binds 10.0.0.192 + 127.0.0.1; the bridge-networked
+          # traefik reaches it via the host LAN IP.
+          - url: "http://10.0.0.192:5380"
