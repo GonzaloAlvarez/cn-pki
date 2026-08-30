@@ -14,6 +14,6 @@ http:
       loadBalancer:
         servers:
           # Technitium web console (cn-dnsdhcpd, network_mode: host).
-          # Console binds 10.0.0.192 + 127.0.0.1; the bridge-networked
+          # Console binds 10.0.0.250 + 127.0.0.1; the bridge-networked
           # traefik reaches it via the host LAN IP.
-          - url: "http://10.0.0.192:5380"
+          - url: "http://10.0.0.250:5380"

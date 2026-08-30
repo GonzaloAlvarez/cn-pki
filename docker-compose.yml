@@ -85,7 +85,7 @@ services:
     restart: unless-stopped
 
   # node-exporter — pki.lan host metrics (CPU/mem/disk/net), scraped by
-  # kaiser Prometheus on 10.0.0.192:9100. network_mode: host so /proc, /sys,
+  # kaiser Prometheus on 10.0.0.250:9100. network_mode: host so /proc, /sys,
   # and the LAN-routable IP are all directly visible.
   node-exporter:
     image: prom/node-exporter:latest
