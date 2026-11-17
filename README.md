@@ -8,7 +8,7 @@ Private CA + certificate management for the home LAN.
 |---|---|---|
 | `traefik` | `:80` / `:443` | Reverse proxy — terminates TLS with a cert from step-ca; serves the CA bootstrap cert and redirects everything else to HTTPS |
 | `step-ca` | `:9000` | Private ACME CA — signs certificates with your existing root CA |
-| `ca-cert` | `http://<PKI_DOMAIN>/cert/ca.crt` | Serves root CA cert over plain HTTP for bootstrapping trust |
+| `ca-cert` | `http://<PKI_DOMAIN>/cert/ca.crt` | Serves root CA cert over plain HTTP for bootstrapping trust. Traefik adds `Content-Type: application/x-x509-ca-cert` and `Content-Disposition: attachment; filename=ca.crt` (`ca-download` middleware) so every browser downloads the file instead of rendering the PEM inline |
 
 Traefik obtains a TLS certificate from step-ca via ACME (http-01 challenge) on first start, and redirects HTTP to HTTPS. Step-ca keeps its own port (ACME clients connect to it directly). Endpoint up/down + cert-expiry monitoring lives in the cn-observability stack (Grafana `service-status` dashboard + blackbox-exporter probes; `TailnetCertExpiringSoon` alert on the VPS Alertmanager).
 
@@ -78,7 +78,7 @@ incident that prompted the change.
 
 ### 4. Device trust (one-time per device)
 
-The root CA cert is available for download over plain HTTP (no TLS trust needed):
+The root CA cert is available for download over plain HTTP (no TLS trust needed). Opening the URL in a browser always saves `ca.crt` to the device's downloads (the response carries `Content-Disposition: attachment`; busybox httpd alone sends no `Content-Type`, and browsers such as Firefox Nightly on Android then display the PEM as text). From a shell:
 
 ```sh
 curl -O http://<PKI_DOMAIN>/cert/ca.crt
@@ -91,7 +91,7 @@ Then install it as a trusted root CA on each device:
 | Linux | `sudo cp ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates` |
 | macOS | Keychain Access → drag in cert → set "Always Trust" |
 | iOS | Settings → General → VPN & Device Management → install profile → Certificate Trust Settings → enable |
-| Android | Settings → Security → Install from storage |
+| Android | Open the URL in any browser (the file lands in Downloads) → Settings → Security → Install a certificate → CA certificate → pick `ca.crt` |
 
 After this, all `.lan` services signed by this CA show a green padlock automatically.
 

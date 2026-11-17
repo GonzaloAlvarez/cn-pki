@@ -141,6 +141,16 @@ services:
       - "traefik.http.routers.ca-cert-secure.tls.certresolver=stepca"
       - "traefik.http.routers.ca-cert-secure.priority=100"
       - "traefik.http.services.ca-cert.loadbalancer.server.port=80"
+      # Force a download in every browser. busybox httpd has no MIME type for
+      # .crt and sends no Content-Type at all, so browsers sniff the PEM as
+      # text and render it inline (Firefox Nightly on Android does) and the
+      # operator ends up copy-pasting the certificate. Traefik stamps the CA
+      # MIME type and an attachment disposition on both routers; the curl /
+      # get_url fetchers (amun pki role, setup scripts, dotfiles) ignore both.
+      - "traefik.http.middlewares.ca-download.headers.customresponseheaders.Content-Type=application/x-x509-ca-cert"
+      - "traefik.http.middlewares.ca-download.headers.customresponseheaders.Content-Disposition=attachment; filename=ca.crt"
+      - "traefik.http.routers.ca-cert.middlewares=ca-download"
+      - "traefik.http.routers.ca-cert-secure.middlewares=ca-download"
     volumes:
       - ./pki/root_ca.crt:/www/cert/ca.crt:ro
     restart: unless-stopped
